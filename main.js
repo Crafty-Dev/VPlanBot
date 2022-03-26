@@ -2,7 +2,7 @@ const {Client, Intents, TextChannel} = require('discord.js');
 const puppeteer = require("puppeteer");
 const fs = require('fs');
 
-const PREFIX = '-';
+const PREFIX = '!';
 
 const client = new Client({intents: ['GUILDS', 'GUILD_MESSAGES']});
 
@@ -10,9 +10,10 @@ client.on('ready', () => {
 
     client.user.setActivity({
         type: 'LISTENING',
-        name: 'hoelty-celle.de'
+        name: '!vplan'
     });
     console.log(`Bot is online as ${client.user.tag}`);
+    updateDailyPostTimer();
 
 });
 
@@ -86,6 +87,30 @@ client.on('messageCreate', (message) => {
 
         postSubstitutionPlanByDay(day, message.channel);
 
+    }
+
+    if(command === 'vplanchannel'){
+
+        if(!fs.existsSync('./guildData.json'))
+        fs.writeFileSync('./guildData.json', '{}', 'utf-8');
+
+        if(args.length > 0){
+
+            if(args[0].toUpperCase() === 'REMOVE'){
+                const json = JSON.parse(fs.readFileSync('./guildData.json'));
+                if(json[message.guild.id] !== undefined){
+                    delete json[message.guild.id];
+                    fs.writeFileSync('./guildData.json', JSON.stringify(json), 'utf-8');
+                    message.channel.send(`**Removed Discord Server **${message.guild.name} **from daily posts**`);
+                }
+            }
+            return;
+        }
+        
+        const json = JSON.parse(fs.readFileSync('./guildData.json'));
+        json[message.guild.id] = message.channel.id;
+        fs.writeFileSync('./guildData.json', JSON.stringify(json), 'utf-8'); 
+        message.channel.send(`**Channel for daily posts has been set to **${message.channel.name}`);
     }
 });
 
@@ -204,4 +229,56 @@ async function setupBrowser(){
         args: ['--no-sandbox']
     });
     return browser;
+}
+
+
+async function updateDailyPostTimer(){
+    console.log('Init');
+    const current = new Date();
+    const postDate = new Date(current.getFullYear(), current.getMonth(), current.getDate(), 5, 0, 0, 0);
+    var postMillis = postDate - current;
+    if(postMillis < 0)
+        postMillis += 86400000;
+
+    setTimeout(async function() {
+
+        if(!fs.existsSync('./guildData.json')){
+            //Ensure that we are not in the same millisecond
+            await new Promise(resolve => setTimeout(resolve, 1));
+            updateDailyPostTimer();
+            console.log('Skipped daily post because guildData file is not present...');
+            return;
+        }
+         
+        const json = JSON.parse(fs.readFileSync('./guildData.json'));    
+        const browser = await setupBrowser();
+        const date = new Date;
+
+        if(date.getDay() > 5){
+            //Ensure that we are not in the same millisecond
+            await new Promise(resolve => setTimeout(resolve, 1));
+            updateDailyPostTimer();
+            console.log('Skipped daily post because it\'s weekend...');
+            return;
+        }
+
+        const day = date.getDay();
+        const week = currentWeek(date);
+
+        const element = await getSubstitutionPlanElement(await browser.newPage(), day, week);
+        const screenshot = await element.screenshot();
+    
+        Object.keys(json).forEach(key => {
+    
+            const channel = client.guilds.cache.get(key).channels.cache.get(json[key]);
+            channel.send({
+                content: `_Daily VPlan_ - **Vertretungsplan für **${getDayName(day)}`,
+                files: [screenshot]
+            })
+        });
+        await browser.close();
+        //Ensure that we are not in the same millisecond
+        await new Promise(resolve => setTimeout(resolve, 1));
+        updateDailyPostTimer();
+    }, postMillis);
 }
