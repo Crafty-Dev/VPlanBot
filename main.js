@@ -30,7 +30,7 @@ client.on('messageCreate', (message) => {
 
         if(args.length === 0){
             const date = new Date;
-            if(date.getDay() > 5)
+            if(date.getDay() === 6 || date.getDay() === 0)
                 postSubstitutionPlanByDay(1, message.channel);
             else
                 postSubstitutionPlanByDay(date.getDay(), message.channel);    
@@ -176,7 +176,7 @@ async function postSubstitutionPlanByDate(date, channel){
  * @returns The week of the given date. If the day of the date is a weekend day, the next week is returned
  */
 function currentWeek(date) {
-    const isWeekEnd = date.getDay() > 5;
+    const isWeekEnd = date.getDay() === 6 || date.getDay() === 0;
     var dayNr = (date.getDay() + 6) % 7;
     date.setDate(date.getDate() - dayNr + 3);
 
@@ -254,7 +254,7 @@ async function updateDailyPostTimer(){
         const browser = await setupBrowser();
         const date = new Date;
 
-        if(date.getDay() > 5){
+        if(date.getDay() === 6 || date.getDay() === 0){
             //Ensure that we are not in the same millisecond
             await new Promise(resolve => setTimeout(resolve, 1));
             updateDailyPostTimer();
