@@ -1,10 +1,10 @@
-const {Client, Intents, TextChannel} = require('discord.js');
+const { Client, Intents, TextChannel } = require('discord.js');
 const puppeteer = require("puppeteer");
 const fs = require('fs');
 
 const PREFIX = '!';
 
-const client = new Client({intents: ['GUILDS', 'GUILD_MESSAGES']});
+const client = new Client({ intents: ['GUILDS', 'GUILD_MESSAGES'] });
 
 client.on('ready', () => {
 
@@ -18,38 +18,38 @@ client.on('ready', () => {
 });
 
 client.on('messageCreate', (message) => {
-    if(!message.content.startsWith(PREFIX))
-    return;
+    if (!message.content.startsWith(PREFIX))
+        return;
 
     const command = message.content.split(' ')[0].replace(PREFIX, '');
     const args = message.content.split(' ');
     args.shift();
-    
-    //Commands
-    if(command === 'vplan'){
 
-        if(args.length === 0){
+    //Commands
+    if (command === 'vplan') {
+
+        if (args.length === 0) {
             const date = new Date;
-            if(date.getDay() === 6 || date.getDay() === 0)
+            if (date.getDay() === 6 || date.getDay() === 0)
                 postSubstitutionPlanByDay(1, message.channel);
             else
-                postSubstitutionPlanByDay(date.getDay(), message.channel);    
+                postSubstitutionPlanByDay(date.getDay(), message.channel);
             return;
         }
 
-        if(args[0].includes('.')){
+        if (args[0].includes('.')) {
             const dateData = args[0].split('.');
             const day = parseInt(dateData[0]);
             var month = parseInt(dateData[1]);
             var year = parseInt(dateData[2]);
-            
-            if(dateData[1] === '')
+
+            if (dateData[1] === '')
                 month = new Date().getMonth() + 1;
 
-            if(dateData[2] === '' || dateData.length === 2)
+            if (dateData[2] === '' || dateData.length === 2)
                 year = new Date().getFullYear();
 
-            if(isNaN(day) || isNaN(month) || isNaN(year))
+            if (isNaN(day) || isNaN(month) || isNaN(year))
                 return;
 
             const date = new Date(year, month - 1, day);
@@ -58,7 +58,7 @@ client.on('messageCreate', (message) => {
 
         var day;
 
-        switch(args[0].toUpperCase()){
+        switch (args[0].toUpperCase()) {
             case 'MONTAG': case 'MONDAY': case '1':
                 day = 1;
                 break;
@@ -81,7 +81,7 @@ client.on('messageCreate', (message) => {
                 message.channel.send('**NEIN! NEIN!**');
                 return;
             default:
-                return;                    
+                return;
 
         }
 
@@ -89,16 +89,16 @@ client.on('messageCreate', (message) => {
 
     }
 
-    if(command === 'vplanchannel'){
+    if (command === 'vplanchannel') {
 
-        if(!fs.existsSync('./guildData.json'))
-        fs.writeFileSync('./guildData.json', '{}', 'utf-8');
+        if (!fs.existsSync('./guildData.json'))
+            fs.writeFileSync('./guildData.json', '{}', 'utf-8');
 
-        if(args.length > 0){
+        if (args.length > 0) {
 
-            if(args[0].toUpperCase() === 'REMOVE'){
+            if (args[0].toUpperCase() === 'REMOVE') {
                 const json = JSON.parse(fs.readFileSync('./guildData.json'));
-                if(json[message.guild.id] !== undefined){
+                if (json[message.guild.id] !== undefined) {
                     delete json[message.guild.id];
                     fs.writeFileSync('./guildData.json', JSON.stringify(json), 'utf-8');
                     message.channel.send(`**Removed Discord Server **${message.guild.name} **from daily posts**`);
@@ -106,10 +106,10 @@ client.on('messageCreate', (message) => {
             }
             return;
         }
-        
+
         const json = JSON.parse(fs.readFileSync('./guildData.json'));
         json[message.guild.id] = message.channel.id;
-        fs.writeFileSync('./guildData.json', JSON.stringify(json), 'utf-8'); 
+        fs.writeFileSync('./guildData.json', JSON.stringify(json), 'utf-8');
         message.channel.send(`**Channel for daily posts has been set to **${message.channel.name}`);
     }
 });
@@ -118,21 +118,21 @@ client.login(JSON.parse(fs.readFileSync('./data.json')).discordToken);
 
 
 
-async function postSubstitutionPlanByDay(day, channel){
-        //WebBrowser Setup
-        console.log('Retrieving new VPlan...');
-        const browser = await setupBrowser();
-            
-        
-        const week = currentWeek(new Date);
-        const element = await getSubstitutionPlanElement(await browser.newPage(), day, week);
+async function postSubstitutionPlanByDay(day, channel) {
+    //WebBrowser Setup
+    console.log('Retrieving new VPlan...');
+    const browser = await setupBrowser();
 
-        channel.send({
-            content: `**Vertretungsplan für **${getDayName(day)}`,
-            files: [await element.screenshot()]
-        })
 
-        await browser.close();
+    const week = currentWeek(new Date);
+    const element = await getSubstitutionPlanElement(await browser.newPage(), day, week);
+
+    channel.send({
+        content: `**Vertretungsplan für **${getDayName(day)}`,
+        files: [await element.screenshot()]
+    })
+
+    await browser.close();
 }
 
 /**
@@ -140,34 +140,34 @@ async function postSubstitutionPlanByDay(day, channel){
  * @param {Date} date 
  * @param {TextChannel} channel 
  */
-async function postSubstitutionPlanByDate(date, channel){
+async function postSubstitutionPlanByDate(date, channel) {
 
-        const dayString = (date.getDate() < 10 ? '0' : '') + date.getDate();
-        const monthString = (date.getMonth() + 1 < 10 ? '0' : '') + (date.getMonth() + 1);
+    const dayString = (date.getDate() < 10 ? '0' : '') + date.getDate();
+    const monthString = (date.getMonth() + 1 < 10 ? '0' : '') + (date.getMonth() + 1);
 
-        const dateString = `${dayString}.${monthString}.${date.getFullYear()}`;
+    const dateString = `${dayString}.${monthString}.${date.getFullYear()}`;
 
-        //WebBrowser Setup
-        console.log('Retrieving new VPlan...');
-        const browser = await setupBrowser();            
-        
-        const day = date.getDay();
-        const week = currentWeek(date);
+    //WebBrowser Setup
+    console.log('Retrieving new VPlan...');
+    const browser = await setupBrowser();
 
-        const element = await getSubstitutionPlanElement(await browser.newPage(), day, week);
+    const day = date.getDay();
+    const week = currentWeek(date);
 
-        if(element === undefined){
-            channel.send(`:x: **Es konnte kein Vertretungsplan für den **${dateString} **gefunden werden!**`);
-            return;
-        }
+    const element = await getSubstitutionPlanElement(await browser.newPage(), day, week);
 
-        channel.send({
-            content: `**Vertretungsplan für **${getDayName(day)} **den** ${dateString}`,
-            files: [await element.screenshot()]
-        })
-
-        await browser.close();
+    if (element === undefined) {
+        channel.send(`:x: **Es konnte kein Vertretungsplan für den **${dateString} **gefunden werden!**`);
+        return;
     }
+
+    channel.send({
+        content: `**Vertretungsplan für **${getDayName(day)} **den** ${dateString}`,
+        files: [await element.screenshot()]
+    })
+
+    await browser.close();
+}
 
 
 /**
@@ -185,11 +185,11 @@ function currentWeek(date) {
     if (date.getDay() != 4) {
         date.setMonth(0, 1 + ((4 - date.getDay()) + 7) % 7);
     }
-;    return 1 + Math.ceil((firstThursday - date) / 604800000) + (isWeekEnd ? 1 : 0);
+    ; return 1 + Math.ceil((firstThursday - date) / 604800000) + (isWeekEnd ? 1 : 0);
 }
 
-function getDayName(day){
-    switch(day){
+function getDayName(day) {
+    switch (day) {
         case 1:
             return 'Montag';
         case 2:
@@ -206,12 +206,12 @@ function getDayName(day){
 }
 
 
-async function getSubstitutionPlanElement(page, day, week){
+async function getSubstitutionPlanElement(page, day, week) {
     const data = JSON.parse(fs.readFileSync('./data.json'));
 
     try {
         await page.goto(`https://${data.username}:${data.password}@hoelty-celle.de/vertretungsplan/vplan/${week}/w/w00000.htm`);
-    }catch(e){
+    } catch (e) {
         return;
     }
 
@@ -220,7 +220,7 @@ async function getSubstitutionPlanElement(page, day, week){
 }
 
 
-async function setupBrowser(){
+async function setupBrowser() {
     const browser = await puppeteer.launch({
         defaultViewport: {
             width: 1920,
@@ -232,29 +232,28 @@ async function setupBrowser(){
 }
 
 
-async function updateDailyPostTimer(){
-    console.log('Init');
+async function updateDailyPostTimer() {
     const current = new Date();
-    const postDate = new Date(current.getFullYear(), current.getMonth(), current.getDate(), 5, 0, 0, 0);
+    const postDate = new Date(current.getFullYear(), current.getMonth(), current.getDate(), 16, 30, 0, 0);
     var postMillis = postDate - current;
-    if(postMillis < 0)
+    if (postMillis < 0)
         postMillis += 86400000;
 
-    setTimeout(async function() {
+    setTimeout(async function () {
 
-        if(!fs.existsSync('./guildData.json')){
+        if (!fs.existsSync('./guildData.json')) {
             //Ensure that we are not in the same millisecond
             await new Promise(resolve => setTimeout(resolve, 1));
             updateDailyPostTimer();
             console.log('Skipped daily post because guildData file is not present...');
             return;
         }
-         
-        const json = JSON.parse(fs.readFileSync('./guildData.json'));    
+
+        const json = JSON.parse(fs.readFileSync('./guildData.json'));
         const browser = await setupBrowser();
         const date = new Date;
 
-        if(date.getDay() === 6 || date.getDay() === 0){
+        if (date.getDay() > 4) {
             //Ensure that we are not in the same millisecond
             await new Promise(resolve => setTimeout(resolve, 1));
             updateDailyPostTimer();
@@ -262,14 +261,14 @@ async function updateDailyPostTimer(){
             return;
         }
 
-        const day = date.getDay();
+        const day = date.getDay() + 1;
         const week = currentWeek(date);
 
         const element = await getSubstitutionPlanElement(await browser.newPage(), day, week);
         const screenshot = await element.screenshot();
-    
+
         Object.keys(json).forEach(key => {
-    
+
             const channel = client.guilds.cache.get(key).channels.cache.get(json[key]);
             channel.send({
                 content: `_Daily VPlan_ - **Vertretungsplan für **${getDayName(day)}`,
